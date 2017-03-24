@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>pou&euml;t.net tv</title>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/prototype/1.7.1.0/prototype.js"></script>
+    <script type="text/javascript" src="https://www.youtube.com/iframe_api"></script>
+    <style type="text/css">
+    * { margin:0; padding:0; }
+    body { background: black; color: #fff; font-family: Tahoma,Verdana,Arial,Helvetica,sans-serif; font-size: 9pt; line-height: 0;
+    overflow:hidden; }
+    iframe { width: 100%; height: 100vh; line-height: 0; }
+    #pip {
+      line-height: initial;
+      bottom: 20px;
+      left: 20px;
+      position: absolute;
+      max-width: 320px;
+      opacity: 0.75;
+      background: #000;
+      padding: 1px;
+    }
+    #warning {
+      line-height: initial;
+      bottom: 20px;
+      right: 20px;
+      position: absolute;
+      max-width: 320px;
+      opacity: 0.75;
+      text-align: right;
+      background: #000;
+      padding: 1px;
+    }
+    #pip h2 { background: #224488; margin: 1px; padding: 2px 8px; }
+    #pip h3 { background: #446688; margin: 1px; padding: 2px 8px; }
+    #pip p  { background: #6688aa; margin: 1px; padding: 2px 8px; }    
+    #pip a  { color: #fff; text-decoration: none; }
+    #warning h2 { background: #883022; margin: 1px; padding: 2px 8px; }
+    #warning p  { background: #884446; margin: 1px; padding: 2px 8px; }
+    </style>
+
+    <script>
+      var player = null;
+      function next()
+      {
+        $("pip").hide();
+        new Ajax.Request("next.php",{
+          "onException": function(req,ex) { throw ex; },
+          "onSuccess":function(transport){
+            if (transport && transport.responseJSON && transport.responseJSON.link.link)
+            {
+              var videoID = transport.responseJSON.link.link.match(/youtu(\.be\/|.*v=)([a-zA-Z0-9_\-]{11})/);
+              videoID = videoID[2];
+              //$("pip-previous").update( $("pip").innerHTML );
+              $$("#pip a").first().setAttribute( "href", "http://www.pouet.net/prod.php?which=" + transport.responseJSON.prod.id );
+              $$("#pip h2").first().update( transport.responseJSON.prod.name.escapeHTML() );
+              document.title = transport.responseJSON.prod.name
+              + " :: pou\u00EBt.net tv";
+              if (transport.responseJSON.prod.groups.length)
+              {
+                $$("#pip h3").first().show();
+                $$("#pip h3").first().update( transport.responseJSON.prod.groups.map(function(i){ return i.name; }).join(" && ").escapeHTML() );
+              }
+              else
+              {
+                $$("#pip h3").first().hide();
+              }
+              
+              var info = [];
+              info.push( transport.responseJSON.prod.types.join(" / ") );
+              if (transport.responseJSON.prod.platforms)
+                info.push( Object.values(transport.responseJSON.prod.platforms).map(function(i){ return i.name; }).join(" / ") );
+              if (transport.responseJSON.prod.party)
+                info.push( "released at " + transport.responseJSON.prod.party.name + " " + transport.responseJSON.prod.party_year );
+              else if (transport.responseJSON.prod.releaseDate)
+                info.push( "released in " + transport.responseJSON.prod.releaseDate.substr(0,4) );
+              if (info.length)
+              {
+                $$("#pip p").first("show");
+                $$("#pip p").first().update( info.join(", ").escapeHTML() );
+              }
+              else
+              {
+                $$("#pip p").first("hide");
+              }
+              $("pip").show();
+
+              if (player)
+              {
+                //player.loadVideoById({"videoId":videoID,"suggestedQuality":'hd1080'});
+                player.loadVideoById({"videoId":videoID});
+              }
+              else
+              {
+                player = new YT.Player('player', {
+                  height: '390',
+                  width: '640',
+                  videoId: videoID,
+                  playerVars: { 'controls': 0 },
+                  events: {
+                    'onReady': function onPlayerReady(event) {
+                      player.playVideo();
+                    },
+                    'onStateChange': function onPlayerStateChange(event) {
+                      if (event.data == YT.PlayerState.ENDED)
+                      {
+                        next();
+                      }
+                    },
+                    'onError': function(event) {
+                      next();
+                    }
+                  }
+                });
+              }
+            }
+          },
+        });
+      }
+      function onYouTubeIframeAPIReady() {
+        document.body.insert( "<div id='pip'><a target='_blank'><h2></h2><h3></h3><p></p></a></div>" );
+        document.body.insert( "<div id='warning'><h2>remember !</h2><p>you're watching a cheap copy ! always watch on real hardware if possible !</div>" );
+        next();
+      }
+    </script>
+  </head>
+  <body>
+    <div id="player"></div>
+  </body>
+</html>
